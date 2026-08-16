@@ -84,7 +84,72 @@
           programs.alejandra.enable = true;
           programs.statix.enable = true;
 
-          programs.ruff.enable = true;
+          programs.ruff-format = {
+            enable = true;
+            lineLength = 180;
+            includes = ["faedupes"];
+          };
+          programs.ruff-check = {
+            enable = true;
+            includes = ["faedupes"];
+            extendSelect = [
+              "A"
+              "ANN"
+              "ARG"
+              "ASYNC"
+              "B"
+              "BLE"
+              "C"
+              "C4"
+              "C90"
+              "COM"
+              "D"
+              "DOC"
+              "DTZ"
+              "E"
+              "EM"
+              "EXE"
+              "F"
+              "F"
+              "FA"
+              "FBT"
+              "FIX"
+              "FLY"
+              "FURB"
+              "G"
+              "I"
+              "ICN"
+              "INP"
+              "INT"
+              "ISC"
+              "LOG"
+              "N"
+              "PERF"
+              "PGH"
+              "PIE"
+              "PL"
+              "PTH"
+              "PYI"
+              "Q"
+              "Q"
+              "RET"
+              "RSE"
+              "RUF"
+              "S"
+              "SIM"
+              "SLF"
+              "T10"
+              "T20"
+              "TC"
+              "TD"
+              "TID"
+              "TRY"
+              "UP"
+              "W"
+              "W"
+              "YTT"
+            ];
+          };
         };
 
         pre-commit = {
