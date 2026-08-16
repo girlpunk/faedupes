@@ -25,27 +25,27 @@ args = argparser.parse_args()
 
 db_has_changed = False
 
-def vprint(msg):
+def vprint(msg: str) -> None:
   if args.verbose:
     print(msg)
 
-def fmt_size(size_bytes):
+def fmt_size(size_bytes: int) -> str:
   for unit in ['B', 'KiB', 'MiB', 'GiB']:
     if size_bytes < 1024:
       return f"{size_bytes:.2f} {unit}"
     size_bytes /= 1024
 
-def dbcon(autocommit=False):
+def dbcon(autocommit=False: bool) -> sqlite3.Connection:
   con = sqlite3.connect(DB_PATH, autocommit=autocommit)
   if args.verbose >= 2:
     con.set_trace_callback(print)
   return con
 
-def db_changed():
+def db_changed() -> None:
   global db_has_changed
   db_has_changed = True
 
-def db_cleanup():
+def db_cleanup() -> None:
   global db_has_changed
   if not db_has_changed:
     return
@@ -54,7 +54,7 @@ def db_cleanup():
     db.execute("VACUUM")
     db.execute("ANALYZE")
 
-def db_mktables():
+def db_mktables() -> None:
   pathlib.Path(DB_PATH).parent.mkdir(parents=True, exist_ok=True)
   with dbcon(autocommit=True) as db:
     db.execute("PRAGMA journal_mode = WAL")
@@ -76,8 +76,7 @@ def db_mktables():
     db.execute("CREATE INDEX IF NOT EXISTS files_hash_idx "
                "ON files (hash,path,size,ctime) WHERE hash IS NOT NULL")
 
-
-def db_check_files_exist(db, dbfs):
+def db_check_files_exist(db: sqlite3.Connection, dbfs: list[DbFile]) -> list[DbFile]:
   keep = []
   to_rm = []
   for dbf in dbfs:
@@ -91,7 +90,7 @@ def db_check_files_exist(db, dbfs):
     db_changed()
   return keep
 
-def db_get_file(db, path):
+def db_get_file(db: sqlite3.Connection, path: pathlib.Path) -> DbFile | None:
   rows = list(db.execute(
       "SELECT path, size, ctime, hash FROM files"
       f" WHERE path = ?", (str(path),)))
@@ -102,7 +101,7 @@ def db_get_file(db, path):
   row = rows[0]
   return DbFile(row[0], row[1], row[2], row[3])
 
-def db_add_files(db, paths_stats):
+def db_add_files(db: sqlite3.Connection, paths_stats: list[Tuple[pathlib.Path, os.stat_result]]) -> None:
   if len(paths_stats) < 1:
     return
 
@@ -113,7 +112,7 @@ def db_add_files(db, paths_stats):
   db.commit()
   db_changed()
 
-def db_update_files(db, paths_stats):
+def db_update_files(db: sqlite3.Connection, paths_stats: list[Tuple[pathlib.Path, os.stat_result]]) -> None:
   if len(paths_stats) < 1:
     return
 
@@ -124,7 +123,7 @@ def db_update_files(db, paths_stats):
   db.commit()
   db_changed()
 
-def escape_path_for_like(path):
+def escape_path_for_like(path: pathlib.Path) -> str:
   like = str(path) + "/"
   like = like.replace("\\", "\\\\")
   like = like.replace("%", r"\%")
@@ -132,7 +131,7 @@ def escape_path_for_like(path):
   like += "%"
   return like
 
-def db_files_with_sizes_from_dir(db, root):
+def db_files_with_sizes_from_dir(db: sqlite3.Connection, root: pathlib.Path) -> list[DbFile]:
   # TODO investigate creating a temp table for dupe sizes?
   like = escape_path_for_like(root)
   rows = list(db.execute(
@@ -142,7 +141,7 @@ def db_files_with_sizes_from_dir(db, root):
       (like, "\\")))
   return [DbFile(r[0], r[1], r[2], r[3]) for r in rows]
 
-def db_files_with_dupe_hashes_in_dir(db, root):
+def db_files_with_dupe_hashes_in_dir(db: sqlite3.Connection, root: pathlib.Path) -> list[DbFile]:
   # TODO investigate creating a temp table for directory
   like = escape_path_for_like(root)
   rows = list(db.execute(
@@ -155,13 +154,13 @@ def db_files_with_dupe_hashes_in_dir(db, root):
       (like, "\\")))
   return [DbFile(r[0], r[1], r[2], r[3]) for r in rows]
 
-def db_files_with_hash(db, hsh):
+def db_files_with_hash(db: sqlite3.Connection, hsh: str) -> list[DbFile]:
   rows = list(db.execute(
       "SELECT path, size, ctime, hash FROM files"
       " WHERE hash=? ORDER BY path ASC", (hsh,)))
   return [DbFile(r[0], r[1], r[2], r[3]) for r in rows]
 
-def update_files(db, paths):
+def update_files(db: sqlite3.Connection, paths: list[pathlib.Path]) -> None:
   to_add = []
   to_update = []
 
@@ -182,7 +181,7 @@ def update_files(db, paths):
   if len(to_add) or len(to_update):
     print(f"Files added, updated: {len(to_add)}, {len(to_update)}")
 
-def walk_files(start):
+def walk_files(start: pathlib.Path) -> None:
   with dbcon() as db:
     all_paths = []
     for root, dirs, files in start.walk():
@@ -194,10 +193,11 @@ def walk_files(start):
     update_files(db, all_paths)
 
 def sha1(path):
+def sha1(path: str) -> str:
   with open(path, 'rb', buffering=0) as f:
     return hashlib.file_digest(f, 'sha1').hexdigest()
 
-def update_hashes(db, dbfs):
+def update_hashes(db: sqlite3.Connection, dbfs: list[DbFile]) -> None:
   to_hash = []
   for dbf in dbfs:
     stat = pathlib.Path(dbf.path).stat()
@@ -213,7 +213,8 @@ def update_hashes(db, dbfs):
 
   rows = []
   batch_start = time.monotonic()
-  def write_rows():
+
+  def write_rows() -> None:
     if len(rows) < 1:
       return
 
@@ -233,7 +234,7 @@ def update_hashes(db, dbfs):
 
 # if it is safe to delete the file, return the file that is being kept.
 # returns None if it is not a dupe and therefore is not safe to delete.
-def safety_check(db, dbf_to_check, root):
+def safety_check(db: sqlite3.Connection, dbf_to_check: DbFile, root: pathlib.Path) -> None:
   with_hash = db_files_with_hash(db, dbf_to_check.hash)
   if len(with_hash) < 2:
     print(f"ERROR: Files with same hash gone missing: {dbf_to_check.hash}")
@@ -262,7 +263,8 @@ def safety_check(db, dbf_to_check, root):
     sys.exit(1)
 
   root = root.resolve()
-  def is_in_root(path):
+
+  def is_in_root(path: str) -> bool:
     p = pathlib.Path(path).resolve()
     return p.is_relative_to(root)
 
@@ -290,7 +292,7 @@ def safety_check(db, dbf_to_check, root):
 
   return keep
 
-def find_dupes(root):
+def find_dupes(root: pathlib.Path) -> None:
   with dbcon() as db:
     size_dupes = db_files_with_sizes_from_dir(db, root)
     size_dupes = db_check_files_exist(db, size_dupes)
@@ -304,7 +306,8 @@ def find_dupes(root):
       "#!/usr/bin/env bash",
       "set -eu",
   ]
-  def add_to_script(dbf, keep):
+
+  def add_to_script(dbf: DbFile, keep: bool) -> None:
     if not args.write_script:
       return
     # all on one like to make it easy to grep/filter.
@@ -329,7 +332,7 @@ def find_dupes(root):
       f.write("\n".join(script))
     print(f"Wrote script: {script_path}")
 
-def cleanup_and_exit():
+def cleanup_and_exit() -> None:
   db_cleanup()
   sys.exit(0)
 
