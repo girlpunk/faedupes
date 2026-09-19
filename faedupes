@@ -14,15 +14,15 @@ import time
 
 DB_PATH = pathlib.Path.home() / ".config/faedupes/db"
 
-DbFile = namedtuple('DbFile',
-    field_names=['path', 'size', 'ctime', 'hash'],
+DbFile = namedtuple("DbFile",
+    field_names=["path", "size", "ctime", "hash"],
     defaults=[None])
 
 argparser = argparse.ArgumentParser(allow_abbrev=False)
-argparser.add_argument('--quick',   '-q', action="store_true")
-argparser.add_argument('--reference',     action="store_true")
-argparser.add_argument('--verbose', '-v', action="count", default=0)
-argparser.add_argument('--write-script', type=pathlib.Path, metavar="PATH")
+argparser.add_argument("--quick",   "-q", action="store_true")
+argparser.add_argument("--reference",     action="store_true")
+argparser.add_argument("--verbose", "-v", action="count", default=0)
+argparser.add_argument("--write-script", type=pathlib.Path, metavar="PATH")
 args = argparser.parse_args()
 
 db_has_changed = False
@@ -34,7 +34,7 @@ def vprint(msg: str) -> None:
 
 def fmt_size(size_bytes: int) -> str:
   """Format size into a user-friendly string."""
-  for unit in ['B', 'KiB', 'MiB', 'GiB']:
+  for unit in ["B", "KiB", "MiB", "GiB"]:
     if size_bytes < 1024:
       return f"{size_bytes:.2f} {unit}"
     size_bytes /= 1024
@@ -212,8 +212,8 @@ def walk_files(start: pathlib.Path) -> None:
 
 def sha1(path: str) -> str:
   """Calculate SHA1 hash of a file and return as hex str."""
-  with open(path, 'rb', buffering=0) as f:
-    return hashlib.file_digest(f, 'sha1').hexdigest()
+  with open(path, "rb", buffering=0) as f:
+    return hashlib.file_digest(f, "sha1").hexdigest()
 
 def update_hashes(db: sqlite3.Connection, dbfs: list[DbFile]) -> None:
   """Calculate hashes for any specified files that have changed."""
@@ -354,7 +354,7 @@ def find_dupes(root: pathlib.Path) -> None:
 
   if args.write_script and dupe_count > 0:
     script_path = pathlib.Path(args.write_script)
-    with open(script_path, 'w') as f:
+    with open(script_path, "w") as f:
       f.write("\n".join(script))
     print(f"Wrote script: {script_path}")
 
@@ -363,7 +363,7 @@ def cleanup_and_exit() -> None:
   db_cleanup()
   sys.exit(0)
 
-if __name__ == '__main__':
+if __name__ == "__main__":
   db_mktables()
 
   pwd = pathlib.Path(".").resolve(strict=True)
