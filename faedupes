@@ -358,10 +358,10 @@ def find_dupes(root: pathlib.Path) -> None:
   print(f"Dupes: {dupe_count} files, {fmt_size(dupe_size)}")
 
   if args.write_script and dupe_count > 0:
-    script_path = pathlib.Path(args.write_script)
-    with script_path.open("w") as f:
+    with args.write_script.open("w") as f:
       f.write("\n".join(script))
-    print(f"Wrote script: {script_path}")
+      f.write("\n")
+    print(f"Wrote script: {args.write_script}")
 
 def cleanup_and_exit() -> None:
   """Clean database and exit successfully."""
