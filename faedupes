@@ -217,8 +217,8 @@ def walk_files(start: pathlib.Path) -> None:
 
 def sha1(path: str) -> str:
   """Calculate SHA1 hash of a file and return as hex str."""
-  with open(path, 'rb', buffering=0) as f:
-    return hashlib.file_digest(f, 'sha1').hexdigest()
+  with open(path, "rb", buffering=0) as f:
+    return hashlib.file_digest(f, "sha1").hexdigest()
 
 def update_hashes(db: sqlite3.Connection, dbfs: list[DbFile]) -> None:
   """Calculate hashes for any specified files that have changed."""
